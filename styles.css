@@ -494,7 +494,14 @@ textarea {
     max-width: 60rem;
   }
 
+  /* Keep poll results + share in one column that stays in view while main scrolls */
   .page__aside-col {
+    position: sticky;
+    top: 1rem;
+    align-self: start;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     border-inline-start: 1px solid #333;
     padding-inline-start: 1.75rem;
   }
@@ -503,8 +510,6 @@ textarea {
     margin-top: 0;
     padding-top: 0;
     border-top: none;
-    position: sticky;
-    top: 1.5rem;
   }
 }
 
