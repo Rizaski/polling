@@ -28,15 +28,13 @@ body {
   text-align: center;
 }
 
-/* Poll page: hide content until Firebase confirms a signed-in user */
-.poll-page:not(.auth-verified) .page {
-  opacity: 0;
-  pointer-events: none;
+/* Poll page: hide poll + results until Firebase confirms a signed-in user */
+.poll-page:not(.auth-verified) .poll-gated {
+  display: none;
 }
 
-.poll-page.auth-verified .page {
-  opacity: 1;
-  transition: opacity 0.2s ease;
+.poll-page.auth-verified .poll-gated {
+  display: block;
 }
 
 /* Standalone login page */
@@ -532,6 +530,172 @@ textarea {
   text-align: center;
 }
 
+/* Share: link preview card + platform buttons */
+.share-panel {
+  margin: 0 auto 2rem;
+  max-width: 26rem;
+  text-align: center;
+}
+
+.share-panel__title {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.share-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid #2a2a2a;
+  background: linear-gradient(165deg, #141414 0%, #0a0a0a 100%);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  text-align: center;
+}
+
+.share-card__media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 7.5rem;
+  padding: 1.25rem 1rem;
+  background: radial-gradient(
+    ellipse 120% 80% at 50% 0%,
+    #1e2a38 0%,
+    #0d0d0d 55%
+  );
+  border-bottom: 1px solid #222;
+}
+
+.share-card__logo {
+  display: block;
+  max-width: 200px;
+  height: auto;
+  margin: 0 auto;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
+.share-card__content {
+  padding: 1rem 1.15rem 1.2rem;
+}
+
+.share-card__badge {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8ab4f8;
+}
+
+.share-card__headline {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+  font-family: Roboto, "MV Ammu FK", sans-serif;
+}
+
+.share-card__url {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #9aa0a6;
+  word-break: break-all;
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.65rem;
+  padding: 0 0.9rem;
+  border: 1px solid #3c4043;
+  border-radius: 10px;
+  background: #1a1a1a;
+  color: #e8eaed;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.share-btn:hover {
+  background: #252525;
+  border-color: #5f6368;
+}
+
+.share-btn:focus-visible {
+  outline: 2px solid #8ab4f8;
+  outline-offset: 2px;
+}
+
+.share-btn--primary {
+  flex: 1 1 100%;
+  min-width: 12rem;
+  border-color: #8ab4f8;
+  background: #174ea6;
+  color: #fff;
+  font-weight: 600;
+}
+
+.share-btn--primary:hover {
+  background: #1a5fd4;
+  border-color: #aecbfa;
+}
+
+.share-btn--icon {
+  width: 2.65rem;
+  min-width: 2.65rem;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.share-btn__icon {
+  flex-shrink: 0;
+}
+
+.share-toast {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: #1e3a1e;
+  border: 1px solid #2d5a2d;
+  color: #c8e6c9;
+  font-size: 0.85rem;
+}
+
+@media (min-width: 480px) {
+  .share-actions {
+    gap: 0.6rem;
+  }
+
+  .share-btn--primary {
+    flex: 0 1 auto;
+  }
+}
+
 .poll {
   text-align: right;
 }
@@ -547,10 +711,26 @@ textarea {
   text-align: right;
 }
 
+.poll__status {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: #1a2a1a;
+  border: 1px solid #2d4a2d;
+  color: #b8e0b8;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
 .poll__options {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.poll__options--locked {
+  opacity: 0.92;
 }
 
 .poll__option {
@@ -569,6 +749,12 @@ textarea {
   text-align: right;
   cursor: pointer;
   gap: 0.75rem;
+}
+
+.poll__option:disabled,
+.poll__option[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.72;
 }
 
 .poll__option:focus-visible {

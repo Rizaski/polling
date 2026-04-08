@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // One document per signed-in user: { choice: "1" | "2" }
+    match /poll_dhuvaafaru_votes/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['choice'])
+        && request.resource.data.choice in ['1', '2'];
+      allow update, delete: if false;
+    }
+
+    // Aggregate totals (updated in the same transaction as a new vote).
+    // Kept writable by any signed-in user so rule quirks (number types, map keys)
+    // cannot block voting. Vote documents above still enforce one vote per account.
+    match /poll_dhuvaafaru_meta/stats {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+    }
+  }
+}

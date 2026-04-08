@@ -1,9 +1,11 @@
 (function () {
-  var STORAGE_KEY = "poll_dhuvaafaru_v1";
+  var COLLECTION_VOTES = "poll_dhuvaafaru_votes";
+  var COLLECTION_META = "poll_dhuvaafaru_meta";
+  var DOC_STATS = "stats";
 
   var LABELS = {
-    "1": "ފެނޭ",
-    "2": "ނުފެނޭ",
+    "1": "އާއެކެވެ.",
+    "2": "ނޫނެކެވެ.",
   };
 
   var COLORS = {
@@ -11,71 +13,37 @@
     "2": "#6eb5ff",
   };
 
+  var MSG_ALREADY_VOTED =
+    "ވޯޓް ލެވިއްޖެ. ވޯޓް ބަދަލެއް ނުކުރެވޭނެ.";
+  var MSG_VOTE_FAILED =
+    "ވޯޓު ލައްވާ ނުކުރެވުނު. އަލުން މަސައްކަތް ކުރައްވާ.";
+  var MSG_PERMISSION =
+    "ވޯޓު ސޭވް ކުރެވުނު (ޕަރމިޝަން). ފަޔަރބޭސް ރޫލްސް ޑިޕްލޮއި ކޮށް އަލުން މަސައްކަތް ކުރައްވާ.";
+
   var options = document.querySelectorAll(".poll__option");
+  var optionsWrap = document.querySelector(".poll__options");
   var barsEl = document.getElementById("results-bars");
   var totalEl = document.getElementById("results-total");
+  var pollStatusEl = document.getElementById("poll-status");
 
-  function loadState() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        return {
-          counts: { "1": 0, "2": 0 },
-          lastChoice: null,
-        };
-      }
-      var data = JSON.parse(raw);
-      if (!data.counts) data.counts = { "1": 0, "2": 0 };
-      if (data.counts["1"] == null) data.counts["1"] = 0;
-      if (data.counts["2"] == null) data.counts["2"] = 0;
-      return data;
-    } catch (e) {
-      return {
-        counts: { "1": 0, "2": 0 },
-        lastChoice: null,
-      };
+  var locked = false;
+  var unsubVote = null;
+  var unsubStats = null;
+
+  function showPollStatus(text) {
+    if (!pollStatusEl) return;
+    if (text) {
+      pollStatusEl.textContent = text;
+      pollStatusEl.hidden = false;
+    } else {
+      pollStatusEl.textContent = "";
+      pollStatusEl.hidden = true;
     }
   }
 
-  function saveState(state) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) {}
-  }
-
-  function applyVote(optionId) {
-    var state = loadState();
-    var id = String(optionId);
-    if (state.lastChoice === id) {
-      return state;
-    }
-    if (state.lastChoice) {
-      state.counts[state.lastChoice] = Math.max(
-        0,
-        (state.counts[state.lastChoice] || 0) - 1
-      );
-    }
-    state.counts[id] = (state.counts[id] || 0) + 1;
-    state.lastChoice = id;
-    saveState(state);
-    return state;
-  }
-
-  function syncSelectionFromStorage() {
-    var state = loadState();
-    if (!state.lastChoice) return;
-    options.forEach(function (btn) {
-      var oid = btn.getAttribute("data-option");
-      var on = oid === state.lastChoice;
-      btn.classList.toggle("poll__option--selected", on);
-      btn.setAttribute("aria-checked", on ? "true" : "false");
-    });
-  }
-
-  function renderResults() {
-    var state = loadState();
-    var c1 = state.counts["1"] || 0;
-    var c2 = state.counts["2"] || 0;
+  function renderResults(counts) {
+    var c1 = counts["1"] || 0;
+    var c2 = counts["2"] || 0;
     var total = c1 + c2;
 
     if (totalEl) {
@@ -88,7 +56,7 @@
     if (barsEl) {
       barsEl.innerHTML = "";
       ["1", "2"].forEach(function (id) {
-        var count = state.counts[id] || 0;
+        var count = counts[id] || 0;
         var pct = total === 0 ? 0 : (count / total) * 100;
         var row = document.createElement("div");
         row.className = "results__bar-row";
@@ -119,24 +87,175 @@
     });
   }
 
-  syncSelectionFromStorage();
-  renderResults();
+  function syncSelection(choiceId) {
+    if (!choiceId) return;
+    options.forEach(function (btn) {
+      var oid = btn.getAttribute("data-option");
+      var on = oid === String(choiceId);
+      btn.classList.toggle("poll__option--selected", on);
+      btn.setAttribute("aria-checked", on ? "true" : "false");
+    });
+  }
 
-  options.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var optionId = btn.getAttribute("data-option");
+  function setVotedState(hasVoted, choice) {
+    locked = hasVoted;
+    if (optionsWrap) {
+      optionsWrap.classList.toggle("poll__options--locked", hasVoted);
+    }
+    options.forEach(function (btn) {
+      btn.disabled = hasVoted;
+      btn.setAttribute("aria-disabled", hasVoted ? "true" : "false");
+    });
+    if (hasVoted && choice) {
+      syncSelection(choice);
+      showPollStatus(MSG_ALREADY_VOTED);
+    } else {
       clearSelection();
-      btn.classList.add("poll__option--selected");
-      btn.setAttribute("aria-checked", "true");
-      applyVote(optionId);
-      renderResults();
-    });
+      showPollStatus("");
+    }
+  }
 
-    btn.addEventListener("keydown", function (e) {
-      if (e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        btn.click();
+  function teardownListeners() {
+    if (unsubVote) {
+      unsubVote();
+      unsubVote = null;
+    }
+    if (unsubStats) {
+      unsubStats();
+      unsubStats = null;
+    }
+  }
+
+  function bootPoll(user) {
+    if (typeof firebase === "undefined" || !firebase.firestore) {
+      showPollStatus(
+        "ޑޭޓާބޭސް ލޯޑް ނުވި. ޞަފްޙާ ބޭނުންކުރާ ފަރާތަށް ގުޅޭ."
+      );
+      return;
+    }
+
+    teardownListeners();
+
+    var db = firebase.firestore();
+    var uid = user.uid;
+    var voteRef = db.collection(COLLECTION_VOTES).doc(uid);
+    var statsRef = db.collection(COLLECTION_META).doc(DOC_STATS);
+
+    unsubStats = statsRef.onSnapshot(
+      function (snap) {
+        var counts = { "1": 0, "2": 0 };
+        if (snap.exists) {
+          var d = snap.data();
+          if (d && d.counts) {
+            counts["1"] = d.counts["1"] || 0;
+            counts["2"] = d.counts["2"] || 0;
+          }
+        }
+        renderResults(counts);
+      },
+      function (err) {
+        console.error(err);
+        renderResults({ "1": 0, "2": 0 });
       }
+    );
+
+    unsubVote = voteRef.onSnapshot(
+      function (snap) {
+        if (snap.exists) {
+          var data = snap.data();
+          var choice = data && data.choice ? String(data.choice) : null;
+          setVotedState(true, choice);
+        } else {
+          setVotedState(false, null);
+        }
+      },
+      function (err) {
+        console.error(err);
+        showPollStatus(MSG_VOTE_FAILED);
+      }
+    );
+
+    options.forEach(function (btn) {
+      if (btn._pollBound) return;
+      btn._pollBound = true;
+
+      btn.addEventListener("click", function () {
+        if (locked) return;
+        var optionId = btn.getAttribute("data-option");
+        if (!optionId) return;
+
+        var id = String(optionId);
+        db
+          .runTransaction(function (transaction) {
+            return transaction.get(voteRef).then(function (voteSnap) {
+              if (voteSnap.exists) {
+                throw new Error("already-voted");
+              }
+              return transaction.get(statsRef).then(function (statsSnap) {
+                var c1 = 0;
+                var c2 = 0;
+                if (statsSnap.exists) {
+                  var c = statsSnap.data().counts || {};
+                  c1 = c["1"] || 0;
+                  c2 = c["2"] || 0;
+                }
+                if (id === "1") {
+                  c1 += 1;
+                } else {
+                  c2 += 1;
+                }
+                transaction.set(voteRef, { choice: id });
+                transaction.set(
+                  statsRef,
+                  { counts: { "1": c1, "2": c2 } },
+                  { merge: true }
+                );
+              });
+            });
+          })
+          .catch(function (err) {
+            if (err && err.message === "already-voted") {
+              return;
+            }
+            console.error("poll vote transaction", err && err.code, err);
+            if (err && err.code === "permission-denied") {
+              showPollStatus(MSG_PERMISSION);
+            } else {
+              showPollStatus(MSG_VOTE_FAILED);
+            }
+          });
+      });
+
+      btn.addEventListener("keydown", function (e) {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          if (!locked) btn.click();
+        }
+      });
     });
-  });
+  }
+
+  function init() {
+    if (typeof firebase === "undefined") {
+      return;
+    }
+
+    firebase.auth().onAuthStateChanged(function (user) {
+      teardownListeners();
+      locked = false;
+      if (!user || !user.email) {
+        clearSelection();
+        showPollStatus("");
+        renderResults({ "1": 0, "2": 0 });
+        return;
+      }
+      bootPoll(user);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
