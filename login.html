@@ -41,18 +41,28 @@
             <p id="auth-error" class="login-form__error" role="alert" hidden></p>
 
             <div id="login-step-phone" class="login-form__phone-flow">
-              <label class="login-form__label" for="phone-number">Phone number</label>
-              <input
-                id="phone-number"
-                class="login-form__input"
-                type="tel"
-                inputmode="tel"
-                autocomplete="tel"
-                placeholder="+960 7XXXXXXX"
-                aria-describedby="phone-hint"
-              />
+              <label class="login-form__label" for="phone-number">Mobile number</label>
+              <div
+                class="login-form__phone-row"
+                dir="ltr"
+                role="group"
+                aria-label="Maldives mobile: +960 and 7 digits"
+              >
+                <span class="login-form__phone-prefix" aria-hidden="true">+960</span>
+                <input
+                  id="phone-number"
+                  class="login-form__input login-form__input--local"
+                  type="tel"
+                  inputmode="numeric"
+                  maxlength="7"
+                  autocomplete="tel-national"
+                  placeholder="7123456"
+                  pattern="[0-9]{7}"
+                  aria-describedby="phone-hint"
+                />
+              </div>
               <p id="phone-hint" class="login-form__hint">
-                Use international format (e.g. +960 followed by your number).
+                +960 is already included — enter only your 7-digit number (no leading 0).
               </p>
               <div id="recaptcha-container" class="login-form__recaptcha"></div>
               <button

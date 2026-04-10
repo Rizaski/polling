@@ -1,6 +1,7 @@
 (function () {
   var POLL_PAGE = "index.html";
   var OTP_LEN = 6;
+  var MV_LOCAL_LEN = 7;
 
   function showError(msg) {
     var el = document.getElementById("auth-error");
@@ -24,14 +25,41 @@
     window.location.replace(getNextUrl());
   }
 
-  function normalizePhone(raw) {
-    var s = String(raw || "")
-      .trim()
-      .replace(/\s+/g, "");
-    if (!s) return "";
-    if (s.startsWith("+")) return s;
-    if (s.startsWith("960")) return "+" + s;
-    return "+960" + s.replace(/^0+/, "");
+  /** Local part only (7 digits); returns E.164 +960XXXXXXX or "" if invalid. */
+  function normalizePhone(localRaw) {
+    var digits = String(localRaw || "").replace(/\D/g, "");
+    if (digits.startsWith("960")) {
+      digits = digits.slice(3);
+    }
+    digits = digits.replace(/^0+/, "");
+    if (digits.length !== MV_LOCAL_LEN) return "";
+    return "+960" + digits;
+  }
+
+  function wirePhoneLocalInput(input) {
+    if (!input) return;
+
+    function sanitizeAndSet(value) {
+      var d = String(value || "").replace(/\D/g, "");
+      if (d.startsWith("960")) {
+        d = d.slice(3);
+      }
+      d = d.replace(/^0+/, "");
+      input.value = d.slice(0, MV_LOCAL_LEN);
+    }
+
+    input.addEventListener("input", function () {
+      sanitizeAndSet(input.value);
+    });
+
+    input.addEventListener("paste", function (e) {
+      e.preventDefault();
+      var text = "";
+      try {
+        text = (e.clipboardData || window.clipboardData).getData("text") || "";
+      } catch (err) {}
+      sanitizeAndSet(text);
+    });
   }
 
   function setLoading(btn, loading) {
@@ -133,6 +161,7 @@
     var recaptchaVerifier = null;
 
     wireOtpInputs();
+    wirePhoneLocalInput(phoneInput);
 
     /** Show only phone + reCAPTCHA, or only OTP (after SMS send succeeds). */
     function setLoginStep(step) {
@@ -219,8 +248,10 @@
     if (sendBtn && phoneInput) {
       sendBtn.addEventListener("click", function () {
         var phone = normalizePhone(phoneInput.value);
-        if (!phone || phone.length < 8) {
-          showError("Enter a valid phone number with country code.");
+        if (!phone) {
+          showError(
+            "Enter all 7 digits of your mobile number (after +960)."
+          );
           return;
         }
         if (!recaptchaVerifier) {
@@ -241,7 +272,8 @@
             console.error(err);
             var msg = err.message || "Could not send SMS.";
             if (err.code === "auth/invalid-phone-number") {
-              msg = "Invalid phone number. Use + and country code.";
+              msg =
+                "Invalid number. Enter your 7-digit Maldives mobile (after +960).";
             } else if (err.code === "auth/too-many-requests") {
               msg = "Too many attempts. Try again later.";
             } else if (err.code === "auth/captcha-check-failed") {
