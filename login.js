@@ -1,5 +1,6 @@
 (function () {
   var POLL_PAGE = "index.html";
+  var OTP_LEN = 6;
 
   function showError(msg) {
     var el = document.getElementById("auth-error");
@@ -39,12 +40,91 @@
     btn.classList.toggle("login-form__btn-submit--loading", loading);
   }
 
+  function getOtpInputs() {
+    var wrap = document.getElementById("otp-inputs");
+    if (!wrap) return [];
+    return Array.prototype.slice.call(
+      wrap.querySelectorAll(".login-form__otp-digit")
+    );
+  }
+
+  function clearOtp() {
+    getOtpInputs().forEach(function (inp) {
+      inp.value = "";
+    });
+  }
+
+  function getOtpCode() {
+    return getOtpInputs()
+      .map(function (inp) {
+        return (inp.value || "").replace(/\D/g, "");
+      })
+      .join("");
+  }
+
+  function focusOtpIndex(i) {
+    var inputs = getOtpInputs();
+    if (inputs[i]) inputs[i].focus();
+  }
+
+  function wireOtpInputs() {
+    var wrap = document.getElementById("otp-inputs");
+    if (!wrap) return;
+
+    wrap.addEventListener("paste", function (e) {
+      e.preventDefault();
+      var text = "";
+      try {
+        text = (e.clipboardData || window.clipboardData).getData("text") || "";
+      } catch (err) {}
+      var digits = String(text).replace(/\D/g, "").slice(0, OTP_LEN);
+      var inputs = getOtpInputs();
+      for (var i = 0; i < inputs.length; i++) {
+        inputs[i].value = digits[i] || "";
+      }
+      focusOtpIndex(Math.min(digits.length, OTP_LEN - 1));
+    });
+
+    wrap.addEventListener("input", function (e) {
+      var input = e.target;
+      if (!input.classList.contains("login-form__otp-digit")) return;
+      var idx = parseInt(input.getAttribute("data-otp-index"), 10);
+      if (isNaN(idx)) return;
+
+      var raw = (input.value || "").replace(/\D/g, "");
+      if (raw.length > 1) {
+        var inputs = getOtpInputs();
+        for (var i = 0; i < OTP_LEN; i++) {
+          inputs[i].value = raw[i] || "";
+        }
+        focusOtpIndex(Math.min(raw.length, OTP_LEN - 1));
+        return;
+      }
+
+      input.value = raw;
+      if (raw && idx < OTP_LEN - 1) {
+        focusOtpIndex(idx + 1);
+      }
+    });
+
+    wrap.addEventListener("keydown", function (e) {
+      var input = e.target;
+      if (!input.classList.contains("login-form__otp-digit")) return;
+      if (e.key !== "Backspace") return;
+      var idx = parseInt(input.getAttribute("data-otp-index"), 10);
+      if (isNaN(idx)) return;
+      if (!input.value && idx > 0) {
+        e.preventDefault();
+        focusOtpIndex(idx - 1);
+        getOtpInputs()[idx - 1].value = "";
+      }
+    });
+  }
+
   function boot() {
     var sendBtn = document.getElementById("auth-send-code");
     var verifyBtn = document.getElementById("auth-verify-code");
-    var changeBtn = document.getElementById("auth-change-number");
     var phoneInput = document.getElementById("phone-number");
-    var codeInput = document.getElementById("phone-code");
     var stepPhone = document.getElementById("login-step-phone");
     var stepCode = document.getElementById("login-step-code");
     var recaptchaContainer = document.getElementById("recaptcha-container");
@@ -52,12 +132,25 @@
     var confirmationResult = null;
     var recaptchaVerifier = null;
 
+    wireOtpInputs();
+
+    /** Show only phone + reCAPTCHA, or only OTP (after SMS send succeeds). */
+    function setLoginStep(step) {
+      if (!stepPhone || !stepCode) return;
+      var showPhone = step === "phone";
+      stepPhone.hidden = !showPhone;
+      stepCode.hidden = showPhone;
+    }
+
+    setLoginStep("phone");
+
     function disableAll(disabled) {
       if (sendBtn) sendBtn.disabled = disabled;
       if (verifyBtn) verifyBtn.disabled = disabled;
-      if (changeBtn) changeBtn.disabled = disabled;
       if (phoneInput) phoneInput.disabled = disabled;
-      if (codeInput) codeInput.disabled = disabled;
+      getOtpInputs().forEach(function (inp) {
+        inp.disabled = disabled;
+      });
     }
 
     function clearRecaptcha() {
@@ -74,9 +167,6 @@
       }
     }
 
-    /**
-     * Visible reCAPTCHA is more reliable than invisible on localhost / some browsers.
-     */
     function setupRecaptcha() {
       clearRecaptcha();
       if (!recaptchaContainer) {
@@ -143,12 +233,9 @@
           .signInWithPhoneNumber(phone, recaptchaVerifier)
           .then(function (cr) {
             confirmationResult = cr;
-            if (stepPhone) stepPhone.hidden = true;
-            if (stepCode) stepCode.hidden = false;
-            if (codeInput) {
-              codeInput.value = "";
-              codeInput.focus();
-            }
+            setLoginStep("code");
+            clearOtp();
+            focusOtpIndex(0);
           })
           .catch(function (err) {
             console.error(err);
@@ -186,15 +273,15 @@
       });
     }
 
-    if (verifyBtn && codeInput) {
+    if (verifyBtn) {
       verifyBtn.addEventListener("click", function () {
-        var code = (codeInput.value || "").trim().replace(/\s/g, "");
-        if (!code) {
-          showError("Enter the code from your SMS.");
+        var code = getOtpCode();
+        if (code.length < OTP_LEN) {
+          showError("Enter the full 6-digit code.");
           return;
         }
         if (!confirmationResult) {
-          showError("Request a new code first.");
+          showError("Request a new code from the poll site.");
           return;
         }
         showError("");
@@ -210,23 +297,11 @@
             if (err.code === "auth/invalid-verification-code") {
               msg = "Wrong code. Try again.";
             }
+            clearOtp();
+            focusOtpIndex(0);
             showError(msg);
             setLoading(verifyBtn, false);
           });
-      });
-    }
-
-    if (changeBtn) {
-      changeBtn.addEventListener("click", function () {
-        confirmationResult = null;
-        showError("");
-        if (stepCode) stepCode.hidden = true;
-        if (stepPhone) stepPhone.hidden = false;
-        if (codeInput) codeInput.value = "";
-        setupRecaptcha().catch(function (e) {
-          console.error(e);
-        });
-        if (phoneInput) phoneInput.focus();
       });
     }
   }

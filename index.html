@@ -49,6 +49,12 @@
       <div class="site-header__inner">
         <div class="site-header__content">
           <p id="auth-error" class="site-header__error" role="alert" hidden></p>
+          <a
+            id="auth-signin-link"
+            class="site-header__signin"
+            href="login.html?next=index.html"
+            hidden
+            >ފޯން ނަންބަރަށް ސައިން އިން</a>
           <section
             id="auth-user"
             class="user-profile"
@@ -242,6 +248,34 @@
       </section>
       </div>
     </main>
+
+    <dialog id="vote-auth-modal" class="vote-auth-modal" aria-labelledby="vote-auth-modal-title">
+      <div class="vote-auth-modal__panel" role="document">
+        <button
+          type="button"
+          class="vote-auth-modal__close"
+          id="vote-auth-modal-close"
+          aria-label="Close"
+        >
+          ×
+        </button>
+        <h2 id="vote-auth-modal-title" class="vote-auth-modal__title" dir="rtl" lang="dv">
+          ވޯޓު ލުމަށް ސައިން އިން ކުރައްވާ
+        </h2>
+        <p class="vote-auth-modal__text" dir="rtl" lang="dv">
+          ވޯޓެއް ލަން ބޭނުންވާ ފަރާތްތަކަށް ފޯން ނަންބަރަށް ސމސް ކޯޑް ލިބިގަންނަވައި ސައިން އިން ކުރަން ޖެހޭނެ.
+        </p>
+        <p class="vote-auth-modal__text-en">
+          Sign in with your phone number (SMS code) to cast your vote.
+        </p>
+        <a
+          class="vote-auth-modal__cta"
+          href="login.html?next=index.html"
+          id="vote-auth-modal-cta"
+          >ސައިން އިން ކުރައްވާ / Sign in</a>
+      </div>
+    </dialog>
+
     <script src="firebase-config.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>

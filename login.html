@@ -65,24 +65,80 @@
             </div>
 
             <div id="login-step-code" class="login-form__phone-flow" hidden>
-              <label class="login-form__label" for="phone-code">Verification code</label>
-              <input
-                id="phone-code"
-                class="login-form__input"
-                type="text"
-                inputmode="numeric"
-                maxlength="8"
-                autocomplete="one-time-code"
-                placeholder="123456"
-              />
-              <div class="login-form__phone-actions">
-                <button type="button" id="auth-verify-code" class="login-form__btn-submit">
-                  Verify &amp; continue
-                </button>
-                <button type="button" id="auth-change-number" class="login-form__btn-secondary">
-                  Change number
-                </button>
+              <p class="login-form__otp-lead">
+                Enter the 6-digit code we sent to your phone.
+              </p>
+              <div
+                class="login-form__otp"
+                id="otp-inputs"
+                role="group"
+                aria-label="Verification code"
+                dir="ltr"
+              >
+                <input
+                  class="login-form__otp-digit"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength="6"
+                  autocomplete="one-time-code"
+                  aria-label="Digit 1"
+                  data-otp-index="0"
+                />
+                <input
+                  class="login-form__otp-digit"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength="1"
+                  autocomplete="off"
+                  aria-label="Digit 2"
+                  data-otp-index="1"
+                />
+                <input
+                  class="login-form__otp-digit"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength="1"
+                  autocomplete="off"
+                  aria-label="Digit 3"
+                  data-otp-index="2"
+                />
+                <input
+                  class="login-form__otp-digit"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength="1"
+                  autocomplete="off"
+                  aria-label="Digit 4"
+                  data-otp-index="3"
+                />
+                <input
+                  class="login-form__otp-digit"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength="1"
+                  autocomplete="off"
+                  aria-label="Digit 5"
+                  data-otp-index="4"
+                />
+                <input
+                  class="login-form__otp-digit"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength="1"
+                  autocomplete="off"
+                  aria-label="Digit 6"
+                  data-otp-index="5"
+                />
               </div>
+              <button type="button" id="auth-verify-code" class="login-form__btn-submit">
+                Verify &amp; continue
+              </button>
             </div>
           </form>
         </section>

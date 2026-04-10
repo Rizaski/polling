@@ -15,7 +15,8 @@ service cloud.firestore {
     // Kept writable by any signed-in user so rule quirks (number types, map keys)
     // cannot block voting. Vote documents above still enforce one vote per account.
     match /poll_dhuvaafaru_meta/stats {
-      allow read: if request.auth != null;
+      // Public read so results are visible before sign-in; writes still require auth.
+      allow read: if true;
       allow create, update: if request.auth != null;
     }
   }

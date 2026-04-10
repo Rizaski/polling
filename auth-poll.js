@@ -1,6 +1,4 @@
 (function () {
-  var LOGIN_PAGE = "login.html";
-
   function showError(msg) {
     var el = document.getElementById("auth-error");
     if (!el) return;
@@ -76,13 +74,6 @@
     }
   }
 
-  function goToLogin() {
-    var next = encodeURIComponent(
-      window.location.pathname.split("/").pop() || "index.html"
-    );
-    window.location.replace(LOGIN_PAGE + "?next=" + next);
-  }
-
   function boot() {
     if (typeof firebase === "undefined") {
       showError("Firebase could not load.");
@@ -100,11 +91,18 @@
 
     var auth = firebase.auth();
 
+    var signInLink = document.getElementById("auth-signin-link");
+
     auth.onAuthStateChanged(function (user) {
       if (!user || (!user.email && !user.phoneNumber)) {
-        goToLogin();
+        var userEl = document.getElementById("auth-user");
+        if (userEl) userEl.setAttribute("hidden", "");
+        document.body.classList.remove("auth-verified");
+        if (signInLink) signInLink.removeAttribute("hidden");
+        showError("");
         return;
       }
+      if (signInLink) signInLink.setAttribute("hidden", "");
       updateUI(user);
     });
 
@@ -116,7 +114,7 @@
         auth
           .signOut()
           .then(function () {
-            window.location.href = LOGIN_PAGE;
+            window.location.href = "index.html";
           })
           .catch(function (err) {
             console.error(err);

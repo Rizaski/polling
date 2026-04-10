@@ -27,8 +27,10 @@
   var pollStatusEl = document.getElementById("poll-status");
 
   var locked = false;
+  var currentUser = null;
   var unsubVote = null;
   var unsubStats = null;
+  var optionsBound = false;
 
   function showPollStatus(text) {
     if (!pollStatusEl) return;
@@ -38,6 +40,36 @@
     } else {
       pollStatusEl.textContent = "";
       pollStatusEl.hidden = true;
+    }
+  }
+
+  function openVoteAuthModal() {
+    var d = document.getElementById("vote-auth-modal");
+    if (d && typeof d.showModal === "function") {
+      try {
+        d.showModal();
+        return;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    window.location.href = "login.html?next=index.html";
+  }
+
+  function wireVoteAuthModal() {
+    var modal = document.getElementById("vote-auth-modal");
+    var closeBtn = document.getElementById("vote-auth-modal-close");
+    if (closeBtn && modal) {
+      closeBtn.addEventListener("click", function () {
+        if (typeof modal.close === "function") modal.close();
+      });
+    }
+    if (modal) {
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal && typeof modal.close === "function") {
+          modal.close();
+        }
+      });
     }
   }
 
@@ -115,18 +147,15 @@
     }
   }
 
-  function teardownListeners() {
+  function teardownVoteListener() {
     if (unsubVote) {
       unsubVote();
       unsubVote = null;
     }
-    if (unsubStats) {
-      unsubStats();
-      unsubStats = null;
-    }
   }
 
-  function bootPoll(user) {
+  function setupStatsListener() {
+    if (unsubStats) return;
     if (typeof firebase === "undefined" || !firebase.firestore) {
       showPollStatus(
         "ޑޭޓާބޭސް ލޯޑް ނުވި. ޞަފްޙާ ބޭނުންކުރާ ފަރާތަށް ގުޅޭ."
@@ -134,11 +163,7 @@
       return;
     }
 
-    teardownListeners();
-
     var db = firebase.firestore();
-    var uid = user.uid;
-    var voteRef = db.collection(COLLECTION_VOTES).doc(uid);
     var statsRef = db.collection(COLLECTION_META).doc(DOC_STATS);
 
     unsubStats = statsRef.onSnapshot(
@@ -158,6 +183,21 @@
         renderResults({ "1": 0, "2": 0 });
       }
     );
+  }
+
+  function bootPoll(user) {
+    if (typeof firebase === "undefined" || !firebase.firestore) {
+      showPollStatus(
+        "ޑޭޓާބޭސް ލޯޑް ނުވި. ޞަފްޙާ ބޭނުންކުރާ ފަރާތަށް ގުޅޭ."
+      );
+      return;
+    }
+
+    teardownVoteListener();
+
+    var db = firebase.firestore();
+    var uid = user.uid;
+    var voteRef = db.collection(COLLECTION_VOTES).doc(uid);
 
     unsubVote = voteRef.onSnapshot(
       function (snap) {
@@ -174,56 +214,73 @@
         showPollStatus(MSG_VOTE_FAILED);
       }
     );
+  }
+
+  function bindOptionClicks() {
+    if (optionsBound) return;
+    optionsBound = true;
 
     options.forEach(function (btn) {
-      if (btn._pollBound) return;
-      btn._pollBound = true;
-
       btn.addEventListener("click", function () {
         if (locked) return;
         var optionId = btn.getAttribute("data-option");
         if (!optionId) return;
 
+        var authed =
+          currentUser &&
+          (currentUser.phoneNumber || currentUser.email);
+        if (!authed) {
+          openVoteAuthModal();
+          return;
+        }
+
+        if (typeof firebase === "undefined" || !firebase.firestore) {
+          showPollStatus(MSG_VOTE_FAILED);
+          return;
+        }
+
         var id = String(optionId);
-        db
-          .runTransaction(function (transaction) {
-            return transaction.get(voteRef).then(function (voteSnap) {
-              if (voteSnap.exists) {
-                throw new Error("already-voted");
+        var db = firebase.firestore();
+        var voteRef = db.collection(COLLECTION_VOTES).doc(currentUser.uid);
+        var statsRef = db.collection(COLLECTION_META).doc(DOC_STATS);
+
+        db.runTransaction(function (transaction) {
+          return transaction.get(voteRef).then(function (voteSnap) {
+            if (voteSnap.exists) {
+              throw new Error("already-voted");
+            }
+            return transaction.get(statsRef).then(function (statsSnap) {
+              var c1 = 0;
+              var c2 = 0;
+              if (statsSnap.exists) {
+                var c = statsSnap.data().counts || {};
+                c1 = c["1"] || 0;
+                c2 = c["2"] || 0;
               }
-              return transaction.get(statsRef).then(function (statsSnap) {
-                var c1 = 0;
-                var c2 = 0;
-                if (statsSnap.exists) {
-                  var c = statsSnap.data().counts || {};
-                  c1 = c["1"] || 0;
-                  c2 = c["2"] || 0;
-                }
-                if (id === "1") {
-                  c1 += 1;
-                } else {
-                  c2 += 1;
-                }
-                transaction.set(voteRef, { choice: id });
-                transaction.set(
-                  statsRef,
-                  { counts: { "1": c1, "2": c2 } },
-                  { merge: true }
-                );
-              });
+              if (id === "1") {
+                c1 += 1;
+              } else {
+                c2 += 1;
+              }
+              transaction.set(voteRef, { choice: id });
+              transaction.set(
+                statsRef,
+                { counts: { "1": c1, "2": c2 } },
+                { merge: true }
+              );
             });
-          })
-          .catch(function (err) {
-            if (err && err.message === "already-voted") {
-              return;
-            }
-            console.error("poll vote transaction", err && err.code, err);
-            if (err && err.code === "permission-denied") {
-              showPollStatus(MSG_PERMISSION);
-            } else {
-              showPollStatus(MSG_VOTE_FAILED);
-            }
           });
+        }).catch(function (err) {
+          if (err && err.message === "already-voted") {
+            return;
+          }
+          console.error("poll vote transaction", err && err.code, err);
+          if (err && err.code === "permission-denied") {
+            showPollStatus(MSG_PERMISSION);
+          } else {
+            showPollStatus(MSG_VOTE_FAILED);
+          }
+        });
       });
 
       btn.addEventListener("keydown", function (e) {
@@ -240,15 +297,28 @@
       return;
     }
 
+    wireVoteAuthModal();
+    setupStatsListener();
+    bindOptionClicks();
+
     firebase.auth().onAuthStateChanged(function (user) {
-      teardownListeners();
+      teardownVoteListener();
+      currentUser = user;
       locked = false;
+
       if (!user || (!user.email && !user.phoneNumber)) {
         clearSelection();
         showPollStatus("");
-        renderResults({ "1": 0, "2": 0 });
+        options.forEach(function (btn) {
+          btn.disabled = false;
+          btn.setAttribute("aria-disabled", "false");
+        });
+        if (optionsWrap) {
+          optionsWrap.classList.remove("poll__options--locked");
+        }
         return;
       }
+
       bootPoll(user);
     });
   }
