@@ -243,7 +243,7 @@
     firebase.auth().onAuthStateChanged(function (user) {
       teardownListeners();
       locked = false;
-      if (!user || !user.email) {
+      if (!user || (!user.email && !user.phoneNumber)) {
         clearSelection();
         showPollStatus("");
         renderResults({ "1": 0, "2": 0 });

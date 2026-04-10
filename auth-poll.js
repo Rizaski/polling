@@ -26,24 +26,29 @@
     var avatar = document.getElementById("auth-avatar");
     var fallback = document.getElementById("auth-avatar-fallback");
     var nameEl = document.getElementById("auth-name");
-    var emailEl = document.getElementById("auth-email");
+    var phoneEl = document.getElementById("auth-phone");
     if (!userEl) return;
 
     showError("");
 
-    if (user && user.email) {
+    if (user && (user.phoneNumber || user.email)) {
       closeProfileDropdown();
       userEl.removeAttribute("hidden");
       document.body.classList.add("auth-verified");
 
       var displayName = user.displayName || "";
+      var phone = user.phoneNumber || "";
       var email = user.email || "";
-      var initial = (
-        (displayName.trim().charAt(0) || email.charAt(0) || "?") + ""
-      ).toUpperCase();
+      var primaryLabel = phone || email || "";
+      var initialChar =
+        displayName.trim().charAt(0) ||
+        primaryLabel.replace(/\D/g, "").slice(-1) ||
+        primaryLabel.charAt(0) ||
+        "?";
+      var initial = (initialChar + "").toUpperCase();
 
       if (avatar && fallback) {
-        avatar.alt = displayName || email || "Account";
+        avatar.alt = displayName || primaryLabel || "Account";
         fallback.textContent = initial;
         if (user.photoURL) {
           avatar.onerror = function () {
@@ -64,9 +69,10 @@
         }
       }
       if (nameEl) {
-        nameEl.textContent = displayName || email.split("@")[0] || email;
+        nameEl.textContent =
+          displayName || (phone ? phone : email.split("@")[0]) || email || "?";
       }
-      if (emailEl) emailEl.textContent = email;
+      if (phoneEl) phoneEl.textContent = primaryLabel;
     }
   }
 
@@ -95,7 +101,7 @@
     var auth = firebase.auth();
 
     auth.onAuthStateChanged(function (user) {
-      if (!user || !user.email) {
+      if (!user || (!user.email && !user.phoneNumber)) {
         goToLogin();
         return;
       }

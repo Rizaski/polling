@@ -210,6 +210,117 @@ body {
   align-items: stretch;
 }
 
+.login-form__phone-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+  text-align: left;
+}
+
+.login-form__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: Roboto, sans-serif;
+  color: #bdc1c6;
+}
+
+.login-form__input {
+  width: 100%;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+  font-family: Roboto, sans-serif;
+  color: #e8eaed;
+  background: #0d0d0d;
+  border: 1px solid #444;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.login-form__input:focus {
+  border-color: #8ab4f8;
+}
+
+.login-form__input:disabled {
+  opacity: 0.6;
+}
+
+.login-form__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  font-family: Roboto, sans-serif;
+  color: #80868b;
+}
+
+.login-form__recaptcha {
+  min-height: 4.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.login-form__recaptcha > div {
+  margin: 0;
+}
+
+.login-form__btn-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.65rem;
+  padding: 0.55rem 1.15rem;
+  font-family: Roboto, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  background: #174ea6;
+  border: 1px solid #3367d6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.login-form__btn-submit:hover:not(:disabled) {
+  background: #1a5fd4;
+}
+
+.login-form__btn-submit:focus-visible {
+  outline: 2px solid #8ab4f8;
+  outline-offset: 2px;
+}
+
+.login-form__btn-submit:disabled,
+.login-form__btn-submit--loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.login-form__btn-secondary {
+  min-height: 2.35rem;
+  padding: 0.4rem 0.85rem;
+  font-family: Roboto, sans-serif;
+  font-size: 0.85rem;
+  color: #8ab4f8;
+  background: transparent;
+  border: 1px solid #3c4043;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.login-form__btn-secondary:hover:not(:disabled) {
+  background: rgba(138, 180, 248, 0.08);
+}
+
+.login-form__phone-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .login-form__btn-google {
   display: inline-flex;
   align-items: center;
