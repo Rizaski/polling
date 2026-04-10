@@ -154,6 +154,7 @@
     var verifyBtn = document.getElementById("auth-verify-code");
     var googleBtn = document.getElementById("auth-google-signin");
     var googleFallback = document.getElementById("login-google-fallback");
+    var loginSubtitle = document.getElementById("login-subtitle");
     var phoneInput = document.getElementById("phone-number");
     var stepPhone = document.getElementById("login-step-phone");
     var stepCode = document.getElementById("login-step-code");
@@ -175,6 +176,9 @@
       var showPhone = step === "phone";
       stepPhone.hidden = !showPhone;
       stepCode.hidden = showPhone;
+      if (loginSubtitle) {
+        loginSubtitle.hidden = step === "code";
+      }
       if (googleFallback && step === "code") {
         googleFallback.hidden = true;
       }

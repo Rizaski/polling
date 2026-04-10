@@ -364,6 +364,15 @@ body {
   gap: 0.5rem;
 }
 
+.login-form__otp-lead-dv {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  font-family: "MV Ammu FK", Roboto, sans-serif;
+  color: #e8eaed;
+  text-align: center;
+}
+
 .login-form__otp-lead {
   margin: 0 0 0.75rem;
   font-size: 0.88rem;
