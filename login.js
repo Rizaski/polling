@@ -152,6 +152,8 @@
   function boot() {
     var sendBtn = document.getElementById("auth-send-code");
     var verifyBtn = document.getElementById("auth-verify-code");
+    var googleBtn = document.getElementById("auth-google-signin");
+    var googleFallback = document.getElementById("login-google-fallback");
     var phoneInput = document.getElementById("phone-number");
     var stepPhone = document.getElementById("login-step-phone");
     var stepCode = document.getElementById("login-step-code");
@@ -163,19 +165,33 @@
     wireOtpInputs();
     wirePhoneLocalInput(phoneInput);
 
+    function showGoogleFallback() {
+      if (googleFallback) googleFallback.hidden = false;
+    }
+
     /** Show only phone + reCAPTCHA, or only OTP (after SMS send succeeds). */
     function setLoginStep(step) {
       if (!stepPhone || !stepCode) return;
       var showPhone = step === "phone";
       stepPhone.hidden = !showPhone;
       stepCode.hidden = showPhone;
+      if (googleFallback && step === "code") {
+        googleFallback.hidden = true;
+      }
     }
 
     setLoginStep("phone");
 
+    function setGoogleLoading(loading) {
+      if (!googleBtn) return;
+      googleBtn.disabled = loading;
+      googleBtn.classList.toggle("login-form__btn-google--loading", loading);
+    }
+
     function disableAll(disabled) {
       if (sendBtn) sendBtn.disabled = disabled;
       if (verifyBtn) verifyBtn.disabled = disabled;
+      if (googleBtn) googleBtn.disabled = disabled;
       if (phoneInput) phoneInput.disabled = disabled;
       getOtpInputs().forEach(function (inp) {
         inp.disabled = disabled;
@@ -235,6 +251,7 @@
       console.error(e);
       showError("Could not load reCAPTCHA. Check ad blockers and refresh.");
       if (sendBtn) sendBtn.disabled = true;
+      showGoogleFallback();
     });
 
     auth.onAuthStateChanged(function (user) {
@@ -295,12 +312,43 @@
                 "SMS could not be sent (Firebase error 39). Often: too many tries from this network—wait an hour or switch Wi‑Fi/mobile data. Some countries or carriers are temporarily blocked by Firebase; try a test number in Console → Authentication → Phone, or use another sign-in method. If it persists, contact Firebase Support with your project ID.";
             }
             showError(msg);
+            showGoogleFallback();
             setupRecaptcha().catch(function (e) {
               console.error(e);
             });
           })
           .finally(function () {
             setLoading(sendBtn, false);
+          });
+      });
+    }
+
+    if (googleBtn) {
+      googleBtn.addEventListener("click", function () {
+        showError("");
+        setGoogleLoading(true);
+        var provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+        auth
+          .signInWithPopup(provider)
+          .catch(function (err) {
+            console.error(err);
+            var msg = err.message || "Google sign-in failed.";
+            if (err.code === "auth/popup-closed-by-user") {
+              msg = "Sign-in was closed. Try again.";
+            } else if (err.code === "auth/popup-blocked") {
+              msg = "Pop-up was blocked. Allow pop-ups for this site and try again.";
+            } else if (err.code === "auth/operation-not-allowed") {
+              msg =
+                "Google sign-in is not enabled. In Firebase Console: Authentication → Sign-in method → enable Google.";
+            } else if (err.code === "auth/account-exists-with-different-credential") {
+              msg =
+                "This email is already used with another sign-in method. Use the same method you used before.";
+            }
+            showError(msg);
+          })
+          .finally(function () {
+            setGoogleLoading(false);
           });
       });
     }
