@@ -91,18 +91,14 @@
 
     var auth = firebase.auth();
 
-    var signInLink = document.getElementById("auth-signin-link");
-
     auth.onAuthStateChanged(function (user) {
       if (!user || (!user.email && !user.phoneNumber)) {
         var userEl = document.getElementById("auth-user");
         if (userEl) userEl.setAttribute("hidden", "");
         document.body.classList.remove("auth-verified");
-        if (signInLink) signInLink.removeAttribute("hidden");
         showError("");
         return;
       }
-      if (signInLink) signInLink.setAttribute("hidden", "");
       updateUI(user);
     });
 
