@@ -313,7 +313,7 @@
               /error-code:\s*-39|code:\s*39\b/i.test(String(err.message || ""))
             ) {
               msg =
-                "SMS could not be sent (Firebase error 39). Often: too many tries from this network—wait an hour or switch Wi‑Fi/mobile data. Some countries or carriers are temporarily blocked by Firebase; try a test number in Console → Authentication → Phone, or use another sign-in method. If it persists, contact Firebase Support with your project ID.";
+                "Couldn't send the SMS (too many tries or network limits). Wait a bit, try mobile data instead of Wi‑Fi, or use Sign in with Google below.";
             }
             showError(msg);
             showGoogleFallback();
